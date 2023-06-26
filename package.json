@@ -1,0 +1,21 @@
+{
+  "name": "file-manager",
+  "version": "1.0.0",
+  "description": "A 2 task of RS school node.js",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/start.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/primavera10/node-file-manager.git"
+  },
+  "author": "@primavera10",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/primavera10/node-file-manager/issues"
+  },
+  "homepage": "https://github.com/primavera10/node-file-manager#readme"
+}

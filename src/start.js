@@ -2,6 +2,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'url';
 import fs from 'node:fs'
 import { createReadStream, createWriteStream } from 'fs'
+import os from 'node:os'
+import { createHash } from 'node:crypto'
+import { createBrotliCompress, createBrotliDecompress } from 'node:zlib'
+import { pipeline } from 'node:stream/promises'
 
 
 let directory = path.dirname(fileURLToPath(import.meta.url))
@@ -68,20 +72,20 @@ process.stdin.on('data', (chunk) => {
         readable.pipe(process.stdout)
         writeToConsole()
     }
-    if (operation === 'add'){
+    if (operation === 'add') {
         const newPath = path.resolve(directory, arg)
         fs.writeFileSync(newPath, '')
         writeToConsole()
     }
-    if (operation === 'rn'){
-       const [arg1, arg2] = arg.split(' ')
+    if (operation === 'rn') {
+        const [arg1, arg2] = arg.split(' ')
         const oldPath = path.resolve(directory, arg1)
-        const newPath = path.resolve(path.dirname(oldPath) ,arg2)
+        const newPath = path.resolve(path.dirname(oldPath), arg2)
         console.log(newPath)
         fs.renameSync(oldPath, newPath)
         writeToConsole()
     }
-    if (operation === 'cp'){
+    if (operation === 'cp') {
         const [arg1, arg2] = arg.split(' ')
         const oldPath = path.resolve(directory, arg1)
         const newPath = path.resolve(directory, arg2, path.basename(oldPath));
@@ -91,7 +95,7 @@ process.stdin.on('data', (chunk) => {
         readable.pipe(writable)
         writeToConsole()
     }
-    if (operation === 'mv'){
+    if (operation === 'mv') {
         const [arg1, arg2] = arg.split(' ')
         const oldPath = path.resolve(directory, arg1)
         const newPath = path.resolve(directory, arg2, path.basename(oldPath));
@@ -102,11 +106,104 @@ process.stdin.on('data', (chunk) => {
         readable.on('end', () => fs.unlinkSync(oldPath))
         writeToConsole()
     }
-    if (operation === 'rm'){
+    if (operation === 'rm') {
         const pathToDelete = path.resolve(directory, arg)
         fs.unlinkSync(pathToDelete)
         writeToConsole()
     }
+    if (operation === 'os' && arg === '--EOL') { // please use cmd or bash, bc in Webstorm it simply doesn't work
+        const eol = os.EOL
+        console.log(JSON.stringify(eol))
+        writeToConsole()
+    }
+    if (arg === '--cpus') {
+        let aggerator = 0
+        os.cpus().forEach((cpu) => {
+            console.log(cpu.model)
+            aggerator += 1
+        })
+        console.log(`Total number of cores - ${aggerator}`)
+        writeToConsole()
+    }
+    if (arg === '--homedir') {
+        console.log(`Your home directory is ${os.homedir()}`)
+        writeToConsole()
+    }
+    if (arg === '--username') {
+        console.log(`System username is ${os.userInfo().username}`)
+        writeToConsole()
+    }
+    if (arg === '--architecture') {
+        console.log(`Your GPU architecture is ${os.arch()}`)
+        writeToConsole()
+    }
+    if (operation === 'hash') {
+        const hash = createHash('sha256')
+        const truePath = path.resolve(directory, arg)
+        const input = createReadStream(truePath)
+        input.pipe(hash).setEncoding('hex').pipe(process.stdout);
+        writeToConsole()
+    }
+    if (operation === 'compress') {
+        const [fileToCompress, destination] = arg.split(' ')
+        const oldPath = path.resolve(directory, fileToCompress)
+        if (os.devNull[0] === `\\`) {
+            const separatedName = oldPath.split('\\')
+            const oldFileName = separatedName[separatedName.length - 1]
+            const newPath = path.resolve(directory, destination, oldFileName + '.gz')
+            fs.writeFileSync(newPath, '')
+            const gzip = createBrotliCompress()
+            const readable = createReadStream(oldPath)
+            const writable = createWriteStream(newPath)
+            async function compressToZlib() {
+                await pipeline(readable, gzip, writable)
+            }
+            compressToZlib().then((e) => console.log('Done!'))
+        } else {
+            const separatedName = oldPath.split('\/')
+            const oldFileName = separatedName[separatedName.length - 1]
+            const newPath = path.resolve(directory, destination, oldFileName + '.gz')
+            fs.writeFileSync(newPath, '')
+            const gzip = createBrotliCompress()
+            const readable = createReadStream(oldPath)
+            const writable = createWriteStream(newPath)
+            async function compressToZlib() {
+                await pipeline(readable, gzip, writable)
+            }
+            compressToZlib().then((e) => console.log('Done!'))
+        }
+
+    }
+    if (operation === 'decompress'){
+        const [fileToDecompress, destination] = arg.split(' ')
+        const oldPath = path.resolve(directory, fileToDecompress)
+        if (os.devNull[0] === `\\`) {
+            const separatedName = oldPath.split('\\')
+            const oldFileName = separatedName[separatedName.length - 1]
+            const newPath = path.resolve(directory, destination, oldFileName.slice(0, -3))
+            fs.writeFileSync(newPath, '')
+            const gzip = createBrotliDecompress()
+            const readable = createReadStream(oldPath)
+            const writable = createWriteStream(newPath)
+            async function decompressFromZlib() {
+                await pipeline(readable, gzip, writable)
+            }
+            decompressFromZlib().then((e) => console.log('Done!'))
+        } else {
+            const separatedName = oldPath.split('\/')
+            const oldFileName = separatedName[separatedName.length - 1]
+            const newPath = path.resolve(directory, destination, oldFileName.slice(0, -3))
+            fs.writeFileSync(newPath, '')
+            const gzip = createBrotliDecompress()
+            const readable = createReadStream(oldPath)
+            const writable = createWriteStream(newPath)
+            async function decompressFromZlib() {
+                await pipeline(readable, gzip, writable)
+            }
+            decompressFromZlib().then((e) => console.log('Done!'))
+        }
+    }
+
 
 })
 
